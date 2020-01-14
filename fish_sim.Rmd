@@ -1,0 +1,216 @@
+---
+title: "Grided space-filling design with hetGP surrogates for Fish"
+author: "Jiangeng Huang"
+date: "January 12, 2019"
+output: html_document
+
+params:
+  # Set Netlogo software and model paths
+  nl.path:  "~/fish/NetLogo 6.0.4/app"
+  nl.jarname:  "netlogo-6.0.4.jar"
+  model.path:  "/models/fish/Fish.nlogo"
+  wd:  "~/fish/NetLogo 6.0.4/app/models/fish/"
+  
+  # True if you would like results written to file (results.csv)
+  write_to_file: FALSE
+  
+  # Set initial paramaters for the fish model. Parameter values can be in the form of a single value or a list of values (e.g., population: [1000,2000])
+  population_from_distribution: FALSE # True if the population size should be drawn from an exponential distribution
+  population_mean: 1000 # If population_from_distribution is true, this is the mean of the exponential
+  population:  [180, 200, 500, 1000] # If population_from_distribution is false, use this population size
+
+  capture_line_length:  10 # the length of the capture line (net) in number of parcels
+  use_capture_time:  FALSE # True if each capture session ends after a certain number of ticks; 
+                           # False if each capture session ends after a certain number of fish are caught  
+  num_to_capture:  100 # number of fish to mark and re-capture at each capture session
+  capture_time_line:  90 # length of time (in number of ticks) that each capture session should last
+  first_capture: 400 # length of time (in number of ticks) before first capture begins
+  time_between_captures: 200 # length of time (in number of ticks) between capture sessions
+  total_captures:  2 # total number of captures the simulation should run
+  
+  num_cores: 6 # number of cores to use for parallel processing
+  runs: 20 # number of times to run simulation
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+unlockBinding("params", env = .GlobalEnv)
+
+# libraries
+Sys.setenv(NOAWT=1) # runs Rnetlogo in headless mode
+library(RNetLogo)
+library(dplyr)
+library(hetGP)
+library(stringr)
+library(reshape2)
+library(parallel)
+library(lhs)
+options(warn=-1)
+```
+
+## Model Description
+
+This program runs and outputs results of an agent-based model developed in NetLogo (Wilensky, 1999). The model simulates the dynamics of the capture, re-capture problem in animal populations. The environment is a 70 x 70 grid space. The fish agents move ("swim") on a grid space and are "captured" if they swim across a capture line (net). Fish are assumed to be immediately placed back into into the environments where they can potentially be re-captured. The user can select values for several parameters, including the size of the fish population, the length of the capture line, the number of fish to capture at a time, and the total captures to simulate.
+
+This model builds on the netlogo Flocking model of birds (Wilensky, 1998). For more details on the model, please see the 'Info' tab in Fish.nlogo.
+
+## Parameter Settings
+
+#### Population Parameters
+The population size can be defined or the simulation can draw the size of the population from an exponential distribution. 
+
+Population size drawn from exponential distribution: `r params$population_from_distribution`  
+Mean population size (if drawing from exponential distribution): `r params$population_mean`  
+Population size (if not pulling from exponential distribution): `r params$population`  
+
+#### Capture Parameters
+A capture session can last either for a predefined number of ticks (capture time) or until a certain number of fish have been "caught" (number of fish to capture).  
+
+Length of fish net (in parcels): `r params$capture_line_length`  
+Time between captures (in ticks): `r params$time_between_captures`
+Use capture time:  `r params$use_capture_time`  
+Capture time (in ticks) (if use capture time is true):  `r params$capture_time_line`  
+Number of fish to capture at each session (if use capture time is false):  `r params$num_to_capture` 
+ 
+#### Simulation Parameters
+The simulation will run into its completed all of the capture sessions.  
+
+Number of capture sessions:  `r params$total_captures`  
+Number of runs:  `r params$runs`  
+
+
+```{r netlogo}
+# function to run netlogo and place results in a dataframe
+source(paste0(params$wd,"netlogo_fish_functions.R"))
+
+## set up boundary for X values: 
+lower_b <- 150
+upper_b <- 4000
+
+## maximinLHS: 
+set.seed(2)
+x_ori <- maximinLHS(20, 1)
+params$population <- as.integer( lower_b + x_ori * (upper_b - lower_b) )
+
+# to ensure we're doing the correct number of runs, make any necessary parameter adjustments given certain criteria
+if (params$population_from_distribution == TRUE) { params$population = 0 }
+if (params$use_capture_time == TRUE) { params$num_to_capture == 0 } else { params$capture_time_line == 0 }
+
+## create table with all parameter combinations: 
+## the unique design points for X settings: 
+
+parameters.df <- expand.grid(population_from_distribution = params$population_from_distribution, population_mean = params$population_mean,
+                             population = params$population, capture_line_length = params$capture_line_length, 
+                             num_to_capture = params$num_to_capture, capture_time_line = params$capture_time_line,
+                             use_capture_time = params$use_capture_time, total_captures = params$total_captures,
+                             time_between_captures = params$time_between_captures,
+                             stringsAsFactors = F)
+
+# run fish model
+ptm <- proc.time()
+out <- run_netlogo(parameters.df, params$nl.path, params$nl.jarname, params$model.path, params$runs, params$num_cores)
+sim_time <- proc.time() - ptm; sim_time
+
+# count number of fish caught in second capture that were also caught in first capture
+data1 <- filter(out,capture_num < 3)
+data1 <- group_by(data1,who,runID,population_size) %>% summarise(captures = sum(captured))
+data1 <- group_by(data1,runID,population_size,captures) %>% summarise(recaptures=n())
+data1 <- filter(data1,captures==max(captures))
+data1$recaptures <- ifelse(data1$captures<2,0,data1$recaptures)
+data1 <- data1[c(1,2,4)]
+
+plot(data1$population_size, data1$recaptures, xlab="Population (N)", ylab="Recaptured (r2)")
+
+write.csv(data1,paste0(params$wd,"/out_summary.csv"), row.names = F)
+
+## Save the simulated data: 
+write.csv(data1, file = "GridData.csv",row.names=FALSE)
+
+## First hetGP fit: 
+X_ori <- data1$population_size
+
+
+## Scale X in [100, 2000] into [0 ,1] unit cube: at population=100, the recapture is 100% 
+X <- ( data1$population_size - lower_b )/ (upper_b - lower_b)   # between 1 to 2000 since 0 never stops
+
+## Take sqrt of Y: 
+Y <- data1$recaptures
+
+## Fit a hetGP: 
+mod.a <- mleHetGP(X = X, Z = Y, lower = 0.0001, upper = 10)
+
+## Fit a homGP: 
+mod.b <- mleHomGP(X = X, Z = Y, lower = 0.0001, upper = 10)
+
+## Fit a het.t process: 
+mod.c <- mleHetTP(X = X, Z = Y, lower = 0.0001, upper = 10)
+```
+
+## One-shot Uniform design with hetGP visualization: 
+
+```{r plot, echo=FALSE}
+xgrid <- seq(0, 1, length = 1000)
+p.a <- predict(mod.a, matrix(xgrid, ncol = 1))
+pvar.a <- p.a$sd2 + p.a$nugs
+
+p.b <- predict(mod.b, matrix(xgrid, ncol = 1))
+pvar.b <- p.b$sd2 + p.b$nugs
+
+p.c <- predict(mod.c, matrix(xgrid, ncol = 1))
+pvar.c <- p.c$sd2 + p.c$nugs
+
+## HetGP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="HetGP with Uniform Design (Sqrt Output)", ylim = c(0, 10))
+
+points(X_ori, Y)
+segments(mod.a$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 * (upper_b - lower_b) + lower_b, (mod.a$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "HetGP with Uniform Design (Original Output)", ylim = c(0, 100))
+points(X_ori, Y^2)
+segments(mod.a$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 *  (upper_b - lower_b) + lower_b, (mod.a$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+
+## Hom GP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.b$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="HomGP with Uniform Design (Sqrt Output)", ylim = c(0, 10))
+
+points(X_ori, Y)
+segments(mod.b$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 * (upper_b - lower_b) + lower_b, (mod.b$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
+
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.b$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "HomGP with Uniform Design (Original Output)", ylim = c(0, 100))
+points(X_ori, Y^2)
+segments(mod.b$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 *  (upper_b - lower_b) + lower_b, (mod.b$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
+
+## HetTP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.c$mean, type = "l",xlab = "Population", 
+     ylab = "Sqrt of Number of Marked in Recapture",   main ="HetTP with Uniform Design (Sqrt Output)", ylim = c(0, 10))
+
+points(X_ori, Y)
+segments(mod.c$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , 
+         mod.c$X0 * (upper_b - lower_b) + lower_b, (mod.c$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p$nugs), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p$nugs), col = 2, lty = 2)
+
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.c$mean)^2, type = "l", xlab = "Population", 
+     ylab = "Number of Marked in Recapture", main = "HetTP with Uniform Design (Original Output)", ylim = c(0, 100))
+points(X_ori, Y^2)
+segments(mod.c$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 *  (upper_b - lower_b) + lower_b, (mod.c$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p$nugs))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p$nugs))^2, col = 2, lty = 2)
+```

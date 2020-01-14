@@ -1,0 +1,220 @@
+---
+title: "Sequential design using hetGP for Fish"
+author: "Jiangeng Huang"
+date: "January 12th, 2020"
+output: html_document
+
+params:
+  # Set Netlogo software and model paths
+  nl.path:  "~/fish/NetLogo 6.0.4/app"
+  nl.jarname:  "netlogo-6.0.4.jar"
+  model.path:  "/models/fish/Fish.nlogo"
+  wd:  "~/fish/NetLogo 6.0.4/app/models/fish/"
+  
+  # True if you would like results written to file (results.csv)
+  write_to_file: FALSE
+  
+  # Set initial paramaters for the fish model. Parameter values can be in the form of a single value or a list of values (e.g., population: [1000,2000])
+  population_from_distribution: FALSE # True if the population size should be drawn from an exponential distribution
+  population_mean: 1000 # If population_from_distribution is true, this is the mean of the exponential
+  population:  [200, 500, 1000, 1500, 2000] # If population_from_distribution is false, use this population size
+  capture_line_length:  10 # the length of the capture line (net) in number of parcels
+  use_capture_time:  FALSE # True if each capture session ends after a certain number of ticks; 
+                           # False if each capture session ends after a certain number of fish are caught  
+  num_to_capture:  100 # number of fish to mark and re-capture at each capture session
+  capture_time_line:  90 # length of time (in number of ticks) that each capture session should last
+  first_capture: 400 # length of time (in number of ticks) before first capture begins
+  time_between_captures: 200 # length of time (in number of ticks) between capture sessions
+  total_captures:  2 # total number of captures the simulation should run
+  
+  num_cores: 6 # number of cores to use for parallel processing
+  runs: 1 # number of times to run simulation
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+unlockBinding("params", env = .GlobalEnv)
+
+# libraries
+Sys.setenv(NOAWT=1) # runs Rnetlogo in headless mode
+library(RNetLogo)
+library(dplyr)
+library(hetGP)
+library(stringr)
+library(reshape2)
+library(parallel)
+library(lhs)
+options(warn=-1)
+```
+
+## Model Description
+
+This program runs and outputs results of an agent-based model developed in NetLogo (Wilensky, 1999). The model simulates the dynamics of the capture, re-capture problem in animal populations. The environment is a 70 x 70 grid space. The fish agents move ("swim") on a grid space and are "captured" if they swim across a capture line (net). Fish are assumed to be immediately placed back into into the environments where they can potentially be re-captured. The user can select values for several parameters, including the size of the fish population, the length of the capture line, the number of fish to capture at a time, and the total captures to simulate.
+
+This model builds on the netlogo Flocking model of birds (Wilensky, 1998). For more details on the model, please see the 'Info' tab in Fish.nlogo.
+
+## Parameter Settings
+
+#### Population Parameters
+The population size can be defined or the simulation can draw the size of the population from an exponential distribution. 
+
+Population size drawn from exponential distribution: `r params$population_from_distribution`  
+Mean population size (if drawing from exponential distribution): `r params$population_mean`  
+Population size (if not pulling from exponential distribution): `r params$population`  
+
+#### Capture Parameters
+A capture session can last either for a predefined number of ticks (capture time) or until a certain number of fish have been "caught" (number of fish to capture).  
+
+Length of fish net (in parcels): `r params$capture_line_length`  
+Time between captures (in ticks): `r params$time_between_captures`
+Use capture time:  `r params$use_capture_time`  
+Capture time (in ticks) (if use capture time is true):  `r params$capture_time_line`  
+Number of fish to capture at each session (if use capture time is false):  `r params$num_to_capture` 
+ 
+#### Simulation Parameters
+The simulation will run into its completed all of the capture sessions.  
+
+Number of capture sessions:  `r params$total_captures`  
+Number of runs:  `r params$runs`  
+
+
+```{r netlogo}
+# function to run netlogo and place results in a dataframe
+source(paste0(params$wd,"netlogo_fish_functions.R"))
+
+## set up boundary for X values: 
+lower_b <- 150
+upper_b <- 4000
+
+# to ensure we're doing the correct number of runs, make any necessary parameter adjustments given certain criteria
+if (params$population_from_distribution == TRUE) { params$population = 0 }
+if (params$use_capture_time == TRUE) { params$num_to_capture == 0 } else { params$capture_time_line == 0 }
+
+## create table with all parameter combinations: 
+## the unique design for X settings: 
+## maximinLHS: 
+set.seed(2)
+x_ori <- maximinLHS(10, 1)
+params$population <- as.integer( lower_b + x_ori * (upper_b - lower_b) )
+
+parameters.df <- expand.grid(population_from_distribution = params$population_from_distribution, population_mean = params$population_mean,
+                             population = params$population, capture_line_length = params$capture_line_length, 
+                             num_to_capture = params$num_to_capture, capture_time_line = params$capture_time_line,
+                             use_capture_time = params$use_capture_time, total_captures = params$total_captures,
+                             time_between_captures = params$time_between_captures,
+                             stringsAsFactors = F)
+
+params$runs <- 5  # 10 relications at initial design
+
+# initial run of fish model
+out <- run_netlogo(parameters.df, params$nl.path, params$nl.jarname, params$model.path, params$runs, params$num_cores)
+
+# count number of fish caught in second capture that were also caught in first capture
+data1 <- filter(out,capture_num < 3)
+data1 <- group_by(data1,who,runID,population_size) %>% summarise(captures = sum(captured))
+data1 <- group_by(data1,runID,population_size,captures) %>% summarise(recaptures=n())
+data1 <- filter(data1,captures==max(captures))
+data1$recaptures <- ifelse(data1$captures<2,0,data1$recaptures)
+data1 <- data1[c(1,2,4)]
+
+plot(data1$population_size, data1$recaptures, xlab="Population (N)", ylab="Recaptured (r2)")
+
+write.csv(data1,paste0(params$wd,"/out_summary.csv"), row.names = F)
+
+## Initial hetGP fit: 
+X_ori <- data1$population_size
+
+## Scale X in [100, 2000] into [0 ,1] unit cube: at population=100, the recapture is 100% 
+X <- ( data1$population_size - lower_b )/ (upper_b - lower_b)   
+
+## save output
+Y <- data1$recaptures
+
+mod.a <- mleHetGP(X = X, Z = Y, lower = 0.0001, upper = 10)
+
+## Total Design budget: 
+N <- 400
+
+## Lookahead: 
+h <- rep(NA, N - length(X))
+
+## Set 1 run at each iteration
+params$runs <- 1
+   
+## Sequential runs: 
+ for(i in 1:( N - length(X))) {
+   
+   h[i] <- horizon(mod.a)   ## Adaptive horizon
+   opt <- IMSPE_optim(mod.a, h = h[i])
+   
+   ## collect the new design: 
+   X <- c(X, opt$par)
+   
+   ## run the new point: 
+   
+   ## set up for the model: 
+parameters.newrun <- expand.grid(population_from_distribution = params$population_from_distribution, 
+                                 population_mean = params$population_mean,
+                                 population = as.integer(opt$par * (upper_b - lower_b) + lower_b),  ## change input population as integer
+                                 capture_line_length = params$capture_line_length,
+                                num_to_capture = params$num_to_capture, 
+                                capture_time_line = params$capture_time_line,
+                             use_capture_time = params$use_capture_time, total_captures = params$total_captures,
+                             time_between_captures = params$time_between_captures,
+                             stringsAsFactors = F)
+
+# run fish model at the new run
+out <- run_netlogo(parameters.newrun, params$nl.path, params$nl.jarname, params$model.path, params$runs, params$num_cores)
+
+## Organize the new design and data: 
+data_new <- filter(out, capture_num < 3)
+data_new <- group_by(data_new, who, runID, population_size) %>%  summarise(captures = sum(captured))
+
+data_new <- group_by(data_new,runID,population_size,captures) %>% summarise(recaptures=n())
+data_new <- filter(data_new,captures==max(captures))
+data_new$recaptures <- ifelse(data_new$captures<2,0,data_new$recaptures)
+data_new <- data_new[c(1,2,4)]
+
+
+## If missing: run it again 
+if (  length(data_new$population_size) == 0  ) {
+  # run fish model at the new run
+out <- run_netlogo(parameters.newrun, params$nl.path, params$nl.jarname, params$model.path, params$runs, params$num_cores)
+
+## Organize the new design and data: 
+data_new <-filter(out, captured==TRUE) # filter for fish that were captured at least once
+data_new <-filter(data_new, capture_num <= params$total_captures) # filter out any fish that may have been caught in extra capture at end of simulation
+# count number of fish caught in second capture that were also caught in first capture
+data_new <- filter(data_new, capture_num < 3)
+data_new <- group_by(data_new, who, runID, population_size) %>% summarise(captures = n())
+
+## TODO: This step can lead to empty data_new when no fish recaptured: 
+data_new <- filter(data_new, captures == 2) %>% group_by(., runID, population_size) %>% summarise(recaptures=n())
+}
+
+## Record new design in integer:
+X_ori  <- c(X_ori, data_new$population_size) # in original scale
+
+## Collect new data: 
+
+Ynew <- data_new$recaptures
+Y <- c(Y, Ynew)
+
+## update the model:
+mod.a <- update(mod.a, Xnew = opt$par, Znew = Ynew, ginit = mod.a$g * 1.01)
+
+## Periodically restart MLE calculation:
+if(i %% 10 == 0){ mod2 <- mleHetGP(X = list(X0 = mod.a$X0, Z0 = mod.a$Z0, mult = mod.a$mult), Z = mod.a$Z, lower = 0.0001, upper = 1)
+if(mod2$ll > mod.a$ll) mod.a <- mod2
+}
+
+print(i)
+ }
+
+data_seq <- data.frame(population_size = X_ori, recaptures = Y)
+
+## Save sequential simulated data:
+write.csv(data_seq, file = "GridData.csv",row.names=FALSE)
+```
+
