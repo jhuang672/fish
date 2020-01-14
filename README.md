@@ -14,8 +14,8 @@ This repository contains all code and documentation with Rmarkdown guides to the
 * **fish_seq.Rmd**: for sequential design simulation using IMSPE criteria 
 
 Note: data simulation processes using fish model requires to wrap up NetLogo code into R environment 
-(work for both Linux and windows systems now, but there is a rJava issue with Mac.) 
-Both Rmarkdown files set up the environment first and wrap up NetLogo from R environment. Generated data is then further wrapped into R environment and saved in csv files. 
+(work for both Linux and windows systems now, but there is a rJava issue with Mac). 
+Both Rmarkdown files set up the environment first and wrap up NetLogo from R environment. Then, generated data is further wrapped into R and saved into csv files. 
 
 ### The **data** directory contains the simulated fish data: 
 
