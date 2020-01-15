@@ -7,7 +7,7 @@ This repository contains all code and documentation with Rmarkdown guides to the
 ### Main results in the paper: 
 
 * **fish_fits.Rmd**: for homGP, hetGP, and sequential hetGP surrogates, and ABC calibration in the paper. 
-* **fish_fits.html**: surrogate model fits and ABC calibration results in the paper, knitted from **fish_fits.Rmd**.
+* **fish_fits.md**: [surrogate model fits and ABC calibration results](https://github.com/jhuang672/fish/blob/master/fish_fits.md) in the paper, knitted from **fish_fits.Rmd**.
 
 ### Data generation process: 
 
