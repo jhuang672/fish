@@ -2,7 +2,7 @@
 title: "Fish Example in Stochastic Simulators" 
 author: "Jiangeng Huang"
 date: "January 12, 2020"
-output: html_document
+output: github_document
 ---
 
 This file generates three kinds of surrogate models on the fish agent-based model:  
