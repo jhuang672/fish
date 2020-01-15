@@ -20,8 +20,8 @@ Both Rmarkdown files set up the environment first and wrap up NetLogo from R env
 
 ### The **data** directory contains the simulated fish data: 
 
-* **GridData.csv**: one-shot simulation data from grided space-filling desgin 
-* **SeqData.csv**: sequential design data using the IMSPE criteria 
+* **data/GridData.csv**: one-shot simulation data from grided space-filling desgin 
+* **data/SeqData.csv**: sequential design data using the IMSPE criteria 
 
 ### Who do I talk to? ###
 
