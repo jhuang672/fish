@@ -2,7 +2,7 @@
 
 This repository contains all code and documentation with Rmarkdown guides to the fish agent based model example in the stochastic simulation review paper. 
 
-### Rmarkdown files in this directory: 
+### What is in this directory? 
 
 ### Main results in the paper: 
 
