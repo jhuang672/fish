@@ -1,7 +1,7 @@
 Fish Example in Stochastic Simulators
 ================
 Jiangeng Huang
-June 06, 2020
+June 27, 2020
 
 This file generates three types of surrogate models on the fish
 agent-based model:
