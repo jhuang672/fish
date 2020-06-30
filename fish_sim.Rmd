@@ -1,15 +1,15 @@
 ---
 title: "Grided space-filling design with hetGP surrogates for Fish"
 author: "Jiangeng Huang"
-date: "January 12, 2019"
+date: "June 17, 2020"
 output: html_document
 
 params:
   # Set Netlogo software and model paths
-  nl.path:  "~/fish/NetLogo 6.0.4/app"
+  nl.path:  "/home/victor/fish/NetLogo 6.0.4/app"
   nl.jarname:  "netlogo-6.0.4.jar"
   model.path:  "/models/fish/Fish.nlogo"
-  wd:  "~/fish/NetLogo 6.0.4/app/models/fish/"
+  wd:  "/home/victor/fish/NetLogo 6.0.4/app/models/fish/"
   
   # True if you would like results written to file (results.csv)
   write_to_file: FALSE
@@ -90,8 +90,9 @@ upper_b <- 4000
 
 ## maximinLHS: 
 set.seed(2)
-x_ori <- maximinLHS(20, 1)
-params$population <- as.integer( lower_b + x_ori * (upper_b - lower_b) )
+#x_ori <- maximinLHS(20, 1)      # maximin Latin square sampling
+x_ori <- seq(0, 1, length.out = 20)  # grided design
+params$population <- as.integer( lower_b + x_ori * (upper_b - lower_b) )  # round to nearest integer
 
 # to ensure we're doing the correct number of runs, make any necessary parameter adjustments given certain criteria
 if (params$population_from_distribution == TRUE) { params$population = 0 }
@@ -120,7 +121,7 @@ data1 <- filter(data1,captures==max(captures))
 data1$recaptures <- ifelse(data1$captures<2,0,data1$recaptures)
 data1 <- data1[c(1,2,4)]
 
-plot(data1$population_size, data1$recaptures, xlab="Population (N)", ylab="Recaptured (r2)")
+plot(data1$population_size, data1$recaptures, xlab="Population (N)", ylab="Recaptured", main ="Fish simulation using grided design")
 
 write.csv(data1,paste0(params$wd,"/out_summary.csv"), row.names = F)
 
@@ -135,7 +136,7 @@ X_ori <- data1$population_size
 X <- ( data1$population_size - lower_b )/ (upper_b - lower_b)   # between 1 to 2000 since 0 never stops
 
 ## Take sqrt of Y: 
-Y <- data1$recaptures
+Y <- sqrt(data1$recaptures)
 
 ## Fit a hetGP: 
 mod.a <- mleHetGP(X = X, Z = Y, lower = 0.0001, upper = 10)
@@ -203,14 +204,14 @@ plot(xgrid* (upper_b - lower_b) + lower_b, p.c$mean, type = "l",xlab = "Populati
 points(X_ori, Y)
 segments(mod.c$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , 
          mod.c$X0 * (upper_b - lower_b) + lower_b, (mod.c$mult ) * 0.1,    col = "gray")
-lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p$nugs), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p$nugs), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
 
 ## in original scale for population: 
 plot(xgrid*  (upper_b - lower_b) + lower_b, (p.c$mean)^2, type = "l", xlab = "Population", 
      ylab = "Number of Marked in Recapture", main = "HetTP with Uniform Design (Original Output)", ylim = c(0, 100))
 points(X_ori, Y^2)
 segments(mod.c$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 *  (upper_b - lower_b) + lower_b, (mod.c$mult ) ,    col = "gray")
-lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p$nugs))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p$nugs))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
 ```
