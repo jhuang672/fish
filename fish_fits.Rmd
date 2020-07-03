@@ -78,15 +78,15 @@ Step 4: make plots
 plot(xgrid* (upper_b - lower_b) + lower_b, p.hom$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
      main ="Homoskedastic Gaussian process surrogate on gridded design ", ylim = c(0, 10))
 points(fish$population_size , Y)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
 
 ## transform back in original scale for population: 
 plot( xgrid* (upper_b - lower_b) + lower_b, (p.hom$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
      main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85))
 points(fish$population_size , Y^2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.05, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.95, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
 ```
 
 ## HetGP
@@ -131,15 +131,15 @@ Step 4: make plots
 plot(xgrid* (upper_b - lower_b) + lower_b, p.het$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
      main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
 points(fish$population_size , Y)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
 
 ## transform back in original scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, (p.het$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
      main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85))
 points(fish$population_size , Y^2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.05, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.95, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
 ```
 
 
@@ -187,15 +187,15 @@ Step 4: make plot
 plot(xgrid* (upper_b - lower_b) + lower_b, p.seq$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
      main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 10))
 points(fish$population_size , Y)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
 
 ## transform back in original scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, (p.seq$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
      main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 85))
 points(fish$population_size , Y^2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.05, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.95, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
 ```
 
 
