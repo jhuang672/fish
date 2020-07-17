@@ -220,8 +220,8 @@ lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar
 
 ## “Truth” Fits:
 
-500 replications at the exactly same 20 grided locations of the one-shot
-space-filling design.
+500 dense replications at the exactly same 20 grided locations of the
+one-shot space-filling design.
 
 ## Fit models:
 
@@ -248,9 +248,94 @@ mod.b <- mleHomGP(X = X, Z = Y, lower = 0.0001, upper = 10)
 mod.c <- mleHetTP(X = X, Z = Y, lower = 0.0001, upper = 10)
 ```
 
-## One-shot Uniform “truth” design surrogate fits visualization:
+## One-shot uniform dense “truth” design surrogate fits visualizations:
 
-![](fish_fits_files/figure-gfm/plot-1.png)<!-- -->![](fish_fits_files/figure-gfm/plot-2.png)<!-- -->![](fish_fits_files/figure-gfm/plot-3.png)<!-- -->![](fish_fits_files/figure-gfm/plot-4.png)<!-- -->![](fish_fits_files/figure-gfm/plot-5.png)<!-- -->![](fish_fits_files/figure-gfm/plot-6.png)<!-- -->
+``` r
+xgrid <- seq(0, 1, length = 1000)
+p.a <- predict(mod.a, matrix(xgrid, ncol = 1))
+pvar.a <- p.a$sd2 + p.a$nugs
+
+p.b <- predict(mod.b, matrix(xgrid, ncol = 1))
+pvar.b <- p.b$sd2 + p.b$nugs
+
+p.c <- predict(mod.c, matrix(xgrid, ncol = 1))
+pvar.c <- p.c$sd2 + p.c$nugs
+
+## HetGP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+
+points(X_ori, Y)
+#segments(mod.a$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 * (upper_b - lower_b) + lower_b, (mod.a$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-1.png)<!-- -->
+
+``` r
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 100))
+points(X_ori, Y^2)
+#segments(mod.a$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 *  (upper_b - lower_b) + lower_b, (mod.a$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-2.png)<!-- -->
+
+``` r
+## Hom GP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.b$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+
+points(X_ori, Y)
+#segments(mod.b$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 * (upper_b - lower_b) + lower_b, (mod.b$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-3.png)<!-- -->
+
+``` r
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.b$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 100))
+points(X_ori, Y^2)
+#segments(mod.b$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 *  (upper_b - lower_b) + lower_b, (mod.b$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-4.png)<!-- -->
+
+``` r
+## HetTP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.c$mean, type = "l",xlab = "Population", 
+     ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Student-t process surrogate on gridded design", ylim = c(0, 10))
+
+points(X_ori, Y)
+#segments(mod.c$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 * (upper_b - lower_b) + lower_b, (mod.c$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-5.png)<!-- -->
+
+``` r
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.c$mean)^2, type = "l", xlab = "Population", 
+     ylab = "Number of Marked in Recapture", main = "Heteroskedastic Student-t process surrogate on gridded design", ylim = c(0, 100))
+points(X_ori, Y^2)
+#segments(mod.c$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 *  (upper_b - lower_b) + lower_b, (mod.c$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-6.png)<!-- -->
 
 ## ABC
 
