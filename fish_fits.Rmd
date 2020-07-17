@@ -202,7 +202,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar
 
 ##  "Truth" Fits: 
 
-500 replications at the exactly same 20 grided locations of the one-shot space-filling design. 
+500 dense replications at the exactly same 20 grided locations of the one-shot space-filling design. 
 
 ## Fit models: 
 
@@ -229,9 +229,9 @@ mod.b <- mleHomGP(X = X, Z = Y, lower = 0.0001, upper = 10)
 mod.c <- mleHetTP(X = X, Z = Y, lower = 0.0001, upper = 10)
 ```
 
-## One-shot Uniform "truth" design surrogate fits visualization: 
+## One-shot uniform dense "truth" design surrogate fits visualizations: 
 
-```{r plot, echo=FALSE}
+```{r make plots d}
 xgrid <- seq(0, 1, length = 1000)
 p.a <- predict(mod.a, matrix(xgrid, ncol = 1))
 pvar.a <- p.a$sd2 + p.a$nugs
