@@ -1,7 +1,7 @@
 ---
-title: "Fish Example in Stochastic Simulators" 
+title: "Fish Examples in Stochastic Simulators" 
 author: "Jiangeng Huang"
-date: "June 27, 2020"
+date: "July 15, 2020"
 output: github_document
 ---
 
@@ -10,6 +10,8 @@ This file generates three types of surrogate models on the fish agent-based mode
 * **HomGP**: homoscedastic Gaussian process surrogate on one-shot grided space-filling design 
 * **HetGP**: heteroskedastic Gaussian process surrogate on one-shot grided space-filling design 
 * **Sequential design**: heteroskedastic Gaussian process surrogate on sequential design based on IMSPE criteria
+* **"Truth" fits**: heteroskedastic Gaussian, homoscedastic Gaussian, 
+and heteroskedastic Student-t processes surrogates on a dense grided space-filling design 
 
 and calibration of the fish model using: 
 
@@ -197,6 +199,103 @@ points(fish$population_size , Y^2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
 ```
+
+##  "Truth" Fits: 
+
+500 replications at the exactly same 20 grided locations of the one-shot space-filling design. 
+
+## Fit models: 
+
+```{r}
+## Read in "truth" data:
+fish_2 <- read.csv("data/GridData_2.csv")
+
+## First hetGP fit: 
+X_ori <- fish_2$population_size
+
+## Scale X in [100, 2000] into [0 ,1] unit cube: at population=100, the recapture is 100% 
+X <- ( fish_2$population_size - lower_b )/ (upper_b - lower_b)   # between 1 to 2000 since 0 never stops
+
+## Take sqrt of Y: 
+Y <- sqrt(fish_2$recaptures)
+
+## Fit a hetGP: 
+mod.a <- mleHetGP(X = X, Z = Y, lower = 0.0001, upper = 10)
+
+## Fit a homGP: 
+mod.b <- mleHomGP(X = X, Z = Y, lower = 0.0001, upper = 10)
+
+## Fit a het. Student-t process: 
+mod.c <- mleHetTP(X = X, Z = Y, lower = 0.0001, upper = 10)
+```
+
+## One-shot Uniform "truth" design surrogate fits visualization: 
+
+```{r plot, echo=FALSE}
+xgrid <- seq(0, 1, length = 1000)
+p.a <- predict(mod.a, matrix(xgrid, ncol = 1))
+pvar.a <- p.a$sd2 + p.a$nugs
+
+p.b <- predict(mod.b, matrix(xgrid, ncol = 1))
+pvar.b <- p.b$sd2 + p.b$nugs
+
+p.c <- predict(mod.c, matrix(xgrid, ncol = 1))
+pvar.c <- p.c$sd2 + p.c$nugs
+
+## HetGP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+
+points(X_ori, Y)
+#segments(mod.a$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 * (upper_b - lower_b) + lower_b, (mod.a$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 100))
+points(X_ori, Y^2)
+#segments(mod.a$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 *  (upper_b - lower_b) + lower_b, (mod.a$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+
+## Hom GP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.b$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+
+points(X_ori, Y)
+#segments(mod.b$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 * (upper_b - lower_b) + lower_b, (mod.b$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
+
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.b$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 100))
+points(X_ori, Y^2)
+#segments(mod.b$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 *  (upper_b - lower_b) + lower_b, (mod.b$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
+
+## HetTP fit: 
+
+## in sqrt scale for population: 
+plot(xgrid* (upper_b - lower_b) + lower_b, p.c$mean, type = "l",xlab = "Population", 
+     ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Student-t process surrogate on gridded design", ylim = c(0, 10))
+
+points(X_ori, Y)
+#segments(mod.c$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 * (upper_b - lower_b) + lower_b, (mod.c$mult ) * 0.1,    col = "gray")
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
+
+## in original scale for population: 
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.c$mean)^2, type = "l", xlab = "Population", 
+     ylab = "Number of Marked in Recapture", main = "Heteroskedastic Student-t process surrogate on gridded design", ylim = c(0, 100))
+points(X_ori, Y^2)
+#segments(mod.c$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 *  (upper_b - lower_b) + lower_b, (mod.c$mult ) ,    col = "gray")
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
+lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
+```
+
 
 
 ## ABC
