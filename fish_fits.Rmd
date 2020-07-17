@@ -23,8 +23,9 @@ to better fit the Gaussian error assumptions. Both plots in square root and orig
 For grided design and sequential design, both data generation processes require to wrap up NetLogo through R environment, see the following two 
 Rmarkdown files in this directory on data geneeration: 
 
-* **fish_sim.Rmd** for grided on-shot space-filling design simulation
-* **fish_seq.Rmd** for sequential design simulation using IMSPE criteria 
+* **fish_sim.Rmd** for grided on-shot space-filling design simulation.
+* **fish_seq.Rmd** for sequential design simulation using IMSPE criteria.
+* **fish_sim_2.Rmd** for dense grided one-shot space-filling design simulation.
 
 **************************
 **************************
