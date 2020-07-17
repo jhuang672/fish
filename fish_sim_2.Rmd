@@ -6,10 +6,10 @@ output: html_document
 
 params:
   # Set Netlogo software and model paths
-  nl.path:  "/home/victor/fish/NetLogo 6.0.4/app"
+  nl.path:  "~/fish/NetLogo 6.0.4/app"
   nl.jarname:  "netlogo-6.0.4.jar"
   model.path:  "/models/fish/Fish.nlogo"
-  wd:  "/home/victor/fish/NetLogo 6.0.4/app/models/fish/"
+  wd:  "~/fish/NetLogo 6.0.4/app/models/fish/"
   
   # True if you would like results written to file (results.csv)
   write_to_file: FALSE
