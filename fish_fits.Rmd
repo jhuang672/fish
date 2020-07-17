@@ -7,15 +7,15 @@ output: github_document
 
 This file generates three types of surrogate models on the fish agent-based model:  
 
-* **HomGP**: homoscedastic Gaussian process surrogate on one-shot grided space-filling design 
-* **HetGP**: heteroskedastic Gaussian process surrogate on one-shot grided space-filling design 
-* **Sequential design**: heteroskedastic Gaussian process surrogate on sequential design based on IMSPE criteria
+* **HomGP**: homoscedastic Gaussian process surrogate on one-shot grided space-filling design. 
+* **HetGP**: heteroskedastic Gaussian process surrogate on one-shot grided space-filling design. 
+* **Sequential design**: heteroskedastic Gaussian process surrogate on sequential design based on IMSPE criteria.
 * **"Truth" fits**: heteroskedastic Gaussian, homoscedastic Gaussian, 
-and heteroskedastic Student-t processes surrogates on a dense grided space-filling design 
+and heteroskedastic Student-t processes surrogates on a dense grided space-filling design. 
 
 and calibration of the fish model using: 
 
-* **ABC**: approximate Bayesian computation
+* **ABC**: approximate Bayesian computation.
 
 A square root transformation has been taken to all the responses (which are count data) in the model fitting step, in order 
 to better fit the Gaussian error assumptions. Both plots in square root and original scales are shown. 
