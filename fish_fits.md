@@ -7,18 +7,18 @@ This file generates three types of surrogate models on the fish
 agent-based model:
 
   - **HomGP**: homoscedastic Gaussian process surrogate on one-shot
-    grided space-filling design
+    grided space-filling design.
   - **HetGP**: heteroskedastic Gaussian process surrogate on one-shot
-    grided space-filling design
+    grided space-filling design.
   - **Sequential design**: heteroskedastic Gaussian process surrogate on
-    sequential design based on IMSPE criteria
+    sequential design based on IMSPE criteria.
   - **“Truth” fits**: heteroskedastic Gaussian, homoscedastic Gaussian,
     and heteroskedastic Student-t processes surrogates on a dense grided
-    space-filling design
+    space-filling design.
 
 and calibration of the fish model using:
 
-  - **ABC**: approximate Bayesian computation
+  - **ABC**: approximate Bayesian computation.
 
 A square root transformation has been taken to all the responses (which
 are count data) in the model fitting step, in order to better fit the
@@ -29,9 +29,12 @@ For grided design and sequential design, both data generation processes
 require to wrap up NetLogo through R environment, see the following two
 Rmarkdown files in this directory on data geneeration:
 
-  - **fish\_sim.Rmd** for grided on-shot space-filling design simulation
+  - **fish\_sim.Rmd** for grided on-shot space-filling design
+    simulation.
   - **fish\_seq.Rmd** for sequential design simulation using IMSPE
-    criteria
+    criteria.
+  - **fish\_sim\_2.Rmd** for dense grided one-shot space-filling design
+    simulation.
 
 -----
 
