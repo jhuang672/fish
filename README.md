@@ -1,4 +1,4 @@
-# fish example for stochastic simulators: overview with opportunities
+# Fish example for stochastic simulators: overview with opportunities
 
 This repository contains all code and documentation with Rmarkdown guides to the fish agent based model example in the stochastic simulation review paper. 
 
