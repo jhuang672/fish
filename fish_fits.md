@@ -16,7 +16,7 @@ agent-based model:
     and heteroskedastic Student-t processes surrogates on a dense grided
     space-filling design.
   - **Superimposed plots**: superimposed plots of one-shot homGP,
-    one-shot hetGP, sequential hetGP fits over the “truth” hetGP fit on
+    one-shot hetGP, sequential hetGP fits over the “truth” quantiles on
     dense grided design.
 
 and calibration of the fish model using:
@@ -243,7 +243,36 @@ X <- ( fish_2$population_size - lower_b )/ (upper_b - lower_b)   # between 1 to 
 
 ## Take sqrt of Y: 
 Y_truth <- sqrt(fish_2$recaptures)
+```
 
+## One-shot uniform dense “truth” design surrogate fits visualizations:
+
+``` r
+## Plots of the raw truth simulation: 
+plot(fish_2$population_size, fish_2$recaptures, type = "p",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process on dense grided 'truth' design", ylim = c(0, 100))
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-1.png)<!-- -->
+
+``` r
+## Re-organize for quantiles plots: 
+recaps <- matrix(fish_2$recaptures, ncol = 20, nrow = 500, byrow = TRUE)
+boxplot(recaps, main = "Boxplots of the 'truth' simulation")   
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-2.png)<!-- -->
+
+``` r
+## Quantiles plots: 
+recaps_qs <- apply(recaps, 2, quantile, probs=c(0.025, 0.5, 0.975))
+plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 100),  xlab = "Population", ylab = "Number of Marked in Recapture", main = "Quantiles of 'truth' simulation")
+points(fish_2$population_size[1:20], recaps_qs[1,])
+points(fish_2$population_size[1:20], recaps_qs[3,])
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20d-3.png)<!-- -->
+
+``` r
 ## Fit a hetGP: 
 mod.a <- mleHetGP(X = X, Z = Y_truth, lower = 0.0001, upper = 10)
 
@@ -252,11 +281,7 @@ mod.b <- mleHomGP(X = X, Z = Y_truth, lower = 0.0001, upper = 10)
 
 ## Fit a het. Student-t process: 
 mod.c <- mleHetTP(X = X, Z = Y_truth, lower = 0.0001, upper = 10)
-```
 
-## One-shot uniform dense “truth” design surrogate fits visualizations:
-
-``` r
 xgrid <- seq(0, 1, length = 1000)
 p.a <- predict(mod.a, matrix(xgrid, ncol = 1))
 pvar.a <- p.a$sd2 + p.a$nugs
@@ -278,7 +303,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a))
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
 ```
 
-![](fish_fits_files/figure-gfm/make%20plots%20d-1.png)<!-- -->
+![](fish_fits_files/figure-gfm/make%20plots%20d-4.png)<!-- -->
 
 ``` r
 ## in original scale for population: 
@@ -289,7 +314,7 @@ lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a
 lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
 ```
 
-![](fish_fits_files/figure-gfm/make%20plots%20d-2.png)<!-- -->
+![](fish_fits_files/figure-gfm/make%20plots%20d-5.png)<!-- -->
 
 ``` r
 ## Hom GP fit: 
@@ -303,7 +328,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.b$mean, sqrt(pvar.b))
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
 ```
 
-![](fish_fits_files/figure-gfm/make%20plots%20d-3.png)<!-- -->
+![](fish_fits_files/figure-gfm/make%20plots%20d-6.png)<!-- -->
 
 ``` r
 ## in original scale for population: 
@@ -314,7 +339,7 @@ lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.b$mean, sqrt(pvar.b
 lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
 ```
 
-![](fish_fits_files/figure-gfm/make%20plots%20d-4.png)<!-- -->
+![](fish_fits_files/figure-gfm/make%20plots%20d-7.png)<!-- -->
 
 ``` r
 ## HetTP fit: 
@@ -329,7 +354,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p.c$n
 lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
 ```
 
-![](fish_fits_files/figure-gfm/make%20plots%20d-5.png)<!-- -->
+![](fish_fits_files/figure-gfm/make%20plots%20d-8.png)<!-- -->
 
 ``` r
 ## in original scale for population: 
@@ -341,7 +366,7 @@ lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p.c
 lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
 ```
 
-![](fish_fits_files/figure-gfm/make%20plots%20d-6.png)<!-- -->
+![](fish_fits_files/figure-gfm/make%20plots%20d-9.png)<!-- -->
 
 ## Superimposed plots
 
@@ -356,10 +381,16 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.hom$mean, sqrt(pvar.
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.hom$mean, sqrt(pvar.hom)), col = 1, lty = 2)
 
 ## add HetGP "truth": 
-lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+#lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
+#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+#legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+
+## plot pointwise quantiles only: 
+points(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 2)
+points(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 2)
+points(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 2)
+legend("topright", c("HomGP", "HomGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20e-1.png)<!-- -->
@@ -374,11 +405,17 @@ lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.hom$mean, sqrt(pvar
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.hom$mean, sqrt(pvar.hom))^2), col = 1, lty = 2)
 
 ## in original scale for population: 
-lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
+#lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
 
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+#legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+
+## plot pointwise quantiles only: 
+points(fish_2$population_size[1:20], recaps_qs[2,], col = 2)
+points(fish_2$population_size[1:20], recaps_qs[1,], col = 2)
+points(fish_2$population_size[1:20], recaps_qs[3,], col = 2)
+legend("topright", c("HomGP", "HomGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20e-2.png)<!-- -->
@@ -394,10 +431,16 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.het$mean, sqrt(pvar.
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.het$mean, sqrt(pvar.het)), col = 1, lty = 2)
 
 ## add HetGP "truth": 
-lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-legend("topright", c("HetGP", "Truth", "HetGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+#lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
+#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+#legend("topright", c("HetGP", "Truth", "HetGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+
+## plot pointwise quantiles only: 
+points(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 2)
+points(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 2)
+points(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 2)
+legend("topright", c("HetGP", "HetGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20f-1.png)<!-- -->
@@ -412,11 +455,17 @@ lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.het$mean, sqrt(pvar
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.het$mean, sqrt(pvar.het))^2), col = 1, lty = 2)
 
 ## in original scale for population: 
-lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
+#lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
+#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+#legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
 
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+
+## plot pointwise quantiles only: 
+points(fish_2$population_size[1:20], recaps_qs[2,], col = 2)
+points(fish_2$population_size[1:20], recaps_qs[1,], col = 2)
+points(fish_2$population_size[1:20], recaps_qs[3,], col = 2)
+legend("topright", c("HetGP", "HetGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20f-2.png)<!-- -->
@@ -432,10 +481,16 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.seq$mean, sqrt(pvar.
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.seq$mean, sqrt(pvar.seq)), col = 1, lty = 2)
 
 ## add HetGP "truth": 
-lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-legend("topright", c("SeqGP", "Truth", "SeqGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+#lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
+#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
+#legend("topright", c("SeqGP", "Truth", "SeqGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+
+## plot pointwise quantiles only: 
+points(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 2)
+points(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 2)
+points(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 2)
+legend("topright", c("SeqGP", "SeqGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20g-1.png)<!-- -->
@@ -450,11 +505,17 @@ lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.seq$mean, sqrt(pvar
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar.seq))^2), col = 1, lty = 2)
 
 ## in original scale for population: 
-lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
+#lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
+#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
+#legend("topright", c("SeqGP", "Truth", "SeqGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
 
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-legend("topright", c("SeqGP", "Truth", "SeqGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+
+## plot pointwise quantiles only: 
+points(fish_2$population_size[1:20], recaps_qs[2,], col = 2)
+points(fish_2$population_size[1:20], recaps_qs[1,], col = 2)
+points(fish_2$population_size[1:20], recaps_qs[3,], col = 2)
+legend("topright", c("SeqGP", "SeqGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20g-2.png)<!-- -->
