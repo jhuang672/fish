@@ -247,7 +247,7 @@ pvar.c <- p.c$sd2 + p.c$nugs
 ## HetGP fit: 
 
 ## in sqrt scale for population: 
-plot(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+plot(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process on dense grided 'truth' design", ylim = c(0, 10))
 
 #points(X_ori, Y_truth)
 #segments(mod.a$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 * (upper_b - lower_b) + lower_b, (mod.a$mult ) * 0.1,    col = "gray")
@@ -255,7 +255,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a))
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
 
 ## in original scale for population: 
-plot(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 100))
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Heteroskedastic Gaussian process on dense gridded 'truth' design", ylim = c(0, 100))
 #points(X_ori, Y_truth^2)
 #segments(mod.a$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 *  (upper_b - lower_b) + lower_b, (mod.a$mult ) ,    col = "gray")
 lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
@@ -264,7 +264,7 @@ lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a
 ## Hom GP fit: 
 
 ## in sqrt scale for population: 
-plot(xgrid* (upper_b - lower_b) + lower_b, p.b$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+plot(xgrid* (upper_b - lower_b) + lower_b, p.b$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Homoskedastic Gaussian process on dense gridded 'truth' design", ylim = c(0, 10))
 
 #points(X_ori, Y_truth)
 #segments(mod.b$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 * (upper_b - lower_b) + lower_b, (mod.b$mult ) * 0.1,    col = "gray")
@@ -272,7 +272,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.b$mean, sqrt(pvar.b))
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
 
 ## in original scale for population: 
-plot(xgrid*  (upper_b - lower_b) + lower_b, (p.b$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 100))
+plot(xgrid*  (upper_b - lower_b) + lower_b, (p.b$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Homoskedastic Gaussian process on dense gridded 'truth' design", ylim = c(0, 100))
 #points(X_ori, Y_truth^2)
 #segments(mod.b$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 *  (upper_b - lower_b) + lower_b, (mod.b$mult ) ,    col = "gray")
 lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
@@ -282,7 +282,7 @@ lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.b$mean, sqrt(pvar.b
 
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.c$mean, type = "l",xlab = "Population", 
-     ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Student-t process surrogate on gridded design", ylim = c(0, 10))
+     ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Student-t process on dense gridded 'truth' design", ylim = c(0, 10))
 
 #points(X_ori, Y_truth)
 #segments(mod.c$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 * (upper_b - lower_b) + lower_b, (mod.c$mult ) * 0.1,    col = "gray")
@@ -291,7 +291,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p.c$n
 
 ## in original scale for population: 
 plot(xgrid*  (upper_b - lower_b) + lower_b, (p.c$mean)^2, type = "l", xlab = "Population", 
-     ylab = "Number of Marked in Recapture", main = "Heteroskedastic Student-t process surrogate on gridded design", ylim = c(0, 100))
+     ylab = "Number of Marked in Recapture", main = "Heteroskedastic Student-t process on dense gridded 'truth' design", ylim = c(0, 100))
 #points(X_ori, Y_truth^2)
 #segments(mod.c$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 *  (upper_b - lower_b) + lower_b, (mod.c$mult ) ,    col = "gray")
 lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
