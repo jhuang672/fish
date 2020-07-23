@@ -235,9 +235,14 @@ boxplot(recaps, main = "Boxplots of the 'truth' simulation")
 
 ## Quantiles plots: 
 recaps_qs <- apply(recaps, 2, quantile, probs=c(0.025, 0.5, 0.975))
-plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 100),  xlab = "Population", ylab = "Number of Marked in Recapture", main = "Quantiles of 'truth' simulation")
-points(fish_2$population_size[1:20], recaps_qs[1,])
-points(fish_2$population_size[1:20], recaps_qs[3,])
+#plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 100),  xlab = "Population", ylab = "Number of Marked in Recapture", main = "Quantiles of 'truth' simulation")
+#points(fish_2$population_size[1:20], recaps_qs[1,])
+#points(fish_2$population_size[1:20], recaps_qs[3,])
+
+## Quantiles plots: interpolation
+plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 100),  xlab = "Population", ylab = "Number of Marked in Recapture", type = "l", main = "Quantiles of 'truth' simulation")
+lines(fish_2$population_size[1:20], recaps_qs[1,], lty = 2)
+lines(fish_2$population_size[1:20], recaps_qs[3,], lty = 2)
 
 
 ## Fit a hetGP: 
