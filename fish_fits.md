@@ -10,11 +10,10 @@ agent-based model:
     grided space-filling design.
   - **HetGP**: heteroskedastic Gaussian process surrogate on one-shot
     grided space-filling design.
+  - **QK**: quantile kriging surrogate on one-shot grided space-filling
+    design.
   - **Sequential design**: heteroskedastic Gaussian process surrogate on
     sequential design based on IMSPE criteria.
-  - **“Truth” fits**: heteroskedastic Gaussian, homoscedastic Gaussian,
-    and heteroskedastic Student-t processes surrogates on a dense grided
-    space-filling design.
   - **Superimposed plots**: superimposed plots of one-shot homGP,
     one-shot hetGP, sequential hetGP fits over the “truth” quantiles on
     dense grided design.
@@ -87,7 +86,7 @@ Step 4: make plots
 ``` r
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.hom$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
-     main ="Homoskedastic Gaussian process surrogate on gridded design ", ylim = c(0, 10))
+     main ="Homoskedastic Gaussian process surrogate on gridded design ", ylim = c(0, 10), col = 2)
 points(fish$population_size , Y)
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
@@ -98,7 +97,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.hom$mean, sqrt(pvar.
 ``` r
 ## transform back in original scale for population: 
 plot( xgrid* (upper_b - lower_b) + lower_b, (p.hom$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
-     main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85))
+     main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85), col = 2)
 points(fish$population_size , Y^2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
@@ -125,8 +124,7 @@ X <- ( fish$population_size - lower_b )/ (upper_b - lower_b)
 Y <- sqrt(fish$recaptures)
 ```
 
-Step 2: Train the
-model
+Step 2: Train the model
 
 ``` r
 mod.het <- mleHetGP(X = X, Z = Y, lower = 0.0001, upper = 10) #hetGP now instead
@@ -145,7 +143,7 @@ Step 4: make plots
 ``` r
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.het$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10), col = 2)
 points(fish$population_size , Y)
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
@@ -156,13 +154,72 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.het$mean, sqrt(pvar.
 ``` r
 ## transform back in original scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, (p.het$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85))
+     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85), col = 2)
 points(fish$population_size , Y^2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20b-2.png)<!-- -->
+
+## Quantile Kriging
+
+We can also fit a quantile kriging emulator
+
+Step 1: read in the CSV file of fish simulator runs and prepare the
+data. For QK, this involves a fair bit of re-arranging.
+
+``` r
+fish <- read.csv("data/GridData.csv")
+
+## set up boundary for X values: 
+lower_b <- 150
+upper_b <- 4000
+
+## Scale X in [150, 4000] into [0 ,1] unit cube
+X <- ( fish$population_size - lower_b )/ (upper_b - lower_b)  
+Y <- fish$recaptures
+
+#need to re-arrange the data
+recaps_fit <- matrix(fish$recaptures, ncol = 20, nrow = 20, byrow = TRUE) #first arrange output by unique input
+recaps_fit_qs <- apply(recaps_fit, 2, quantile, probs=c(0.05, 0.275, 0.5, 0.725, 0.95)) #then calculate empirical quantiles
+recaps_fit_qs_y <- as.numeric(recaps_fit_qs) #then flatten down into a 1D vector
+recaps_fit_qs_x <- rep(unique(X),each = 5) #and get the input values to include q as an input
+recaps_fit_qs_q <- rep(c(0.05, 0.275, 0.5, 0.725, 0.95), 20)
+```
+
+Step 2: Train the model
+
+``` r
+mod.QK <- mleHomGP(X = cbind(recaps_fit_qs_x, recaps_fit_qs_q), Z = recaps_fit_qs_y)
+```
+
+Step 3: Make predictions
+
+``` r
+xgrid <- seq(0, 1, length = 1000) #values to make predictions
+
+#and make predictions (need to predict for each quantile we are interested in)
+p.QK.05 <- predict(mod.QK, cbind(xgrid, 0.05) )
+p.QK.25 <- predict(mod.QK, cbind(xgrid, 0.25) )
+p.QK.5 <- predict(mod.QK, cbind(xgrid, 0.5) )
+p.QK.75 <- predict(mod.QK, cbind(xgrid, 0.75) )
+p.QK.95 <- predict(mod.QK, cbind(xgrid, 0.95) )
+```
+
+Step 4: make plots
+
+``` r
+plot(xgrid* (upper_b - lower_b) + lower_b, p.QK.05$mean, type = 'l', lty = 2, col=c("red"), ylim = c(0, 85),  xlab = "Population", ylab = "Number of Marked in Recapture", main ="Quantile kriging surrogate on gridded design ")
+points(fish$population_size , fish$recaptures)
+lines(xgrid* (upper_b - lower_b) + lower_b, p.QK.25$mean, type = 'l', lty = 2, col=c("blue"))
+lines(xgrid* (upper_b - lower_b) + lower_b, p.QK.5$mean, type = 'l', lty = 1, col=c("purple"))
+lines(xgrid* (upper_b - lower_b) + lower_b, p.QK.75$mean, type = 'l', lty = 2, col=c("blue"))
+lines(xgrid* (upper_b - lower_b) + lower_b, p.QK.95$mean, type = 'l', lty = 2, col=c("red"))
+legend('topright', c(paste0(c(95, 75, 50, 25, 5), "%")), lty = c(2,2,1,2,2, 2), col=c("red", "blue", "purple", "blue", "red"))
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20QK-1.png)<!-- -->
 
 ## Sequential Design
 
@@ -205,7 +262,7 @@ Step 4: make plot
 ``` r
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.seq$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 10))
+     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 10), col = 2)
 points(fish$population_size , Y)
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
@@ -216,7 +273,7 @@ lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.seq$mean, sqrt(pvar.
 ``` r
 ## transform back in original scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, (p.seq$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 85))
+     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 85), col = 2)
 points(fish$population_size , Y^2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
 lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
@@ -224,40 +281,30 @@ lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar
 
 ![](fish_fits_files/figure-gfm/make%20plots%20c-2.png)<!-- -->
 
-## “Truth” Fits:
+## Obtaining the “Truth”:
 
 500 dense replications at the exactly same 20 grided locations of the
 one-shot space-filling design.
-
-## Fit models:
 
 ``` r
 ## Read in "truth" data:
 fish_2 <- read.csv("data/GridData_2.csv")
 
-## First hetGP fit: 
-X_ori <- fish_2$population_size
-
-## Scale X in [100, 2000] into [0 ,1] unit cube: at population=100, the recapture is 100% 
-X <- ( fish_2$population_size - lower_b )/ (upper_b - lower_b)   # between 1 to 2000 since 0 never stops
-
-## Take sqrt of Y: 
-Y_truth <- sqrt(fish_2$recaptures)
+## Re-organize for quantiles plots: 
+recaps <- matrix(fish_2$recaptures, ncol = 20, nrow = 500, byrow = TRUE)
 ```
 
-## One-shot uniform dense “truth” design surrogate fits visualizations:
+And plot it:
 
 ``` r
 ## Plots of the raw truth simulation: 
-plot(fish_2$population_size, fish_2$recaptures, type = "p",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process on dense grided 'truth' design", ylim = c(0, 100))
+plot(fish_2$population_size, fish_2$recaptures, type = "p",xlab = "Population", ylab = "Number of Marked in Recapture", ylim = c(0, 85))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20d-1.png)<!-- -->
 
 ``` r
-## Re-organize for quantiles plots: 
-recaps <- matrix(fish_2$recaptures, ncol = 20, nrow = 500, byrow = TRUE)
-boxplot(recaps, main = "Boxplots of the 'truth' simulation")   
+boxplot(recaps, main = "Boxplots of the 'truth' simulations")   
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20d-2.png)<!-- -->
@@ -265,113 +312,14 @@ boxplot(recaps, main = "Boxplots of the 'truth' simulation")
 ``` r
 ## Quantiles plots: 
 recaps_qs <- apply(recaps, 2, quantile, probs=c(0.025, 0.5, 0.975))
-#plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 100),  xlab = "Population", ylab = "Number of Marked in Recapture", main = "Quantiles of 'truth' simulation")
-#points(fish_2$population_size[1:20], recaps_qs[1,])
-#points(fish_2$population_size[1:20], recaps_qs[3,])
 
-## Quantiles plots: interpolation
-plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 100),  xlab = "Population", ylab = "Number of Marked in Recapture", type = "l", main = "Quantiles of 'truth' simulation")
+## Quantile line plots
+plot(fish_2$population_size[1:20], recaps_qs[2,], ylim = c(0, 85),  xlab = "Population", ylab = "Number of Marked in Recapture", type = "l", main = "Quantiles of 'truth' simulations")
 lines(fish_2$population_size[1:20], recaps_qs[1,], lty = 2)
 lines(fish_2$population_size[1:20], recaps_qs[3,], lty = 2)
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20d-3.png)<!-- -->
-
-``` r
-## Fit a hetGP: 
-mod.a <- mleHetGP(X = X, Z = Y_truth, lower = 0.0001, upper = 10)
-
-## Fit a homGP: 
-mod.b <- mleHomGP(X = X, Z = Y_truth, lower = 0.0001, upper = 10)
-
-## Fit a het. Student-t process: 
-mod.c <- mleHetTP(X = X, Z = Y_truth, lower = 0.0001, upper = 10)
-
-xgrid <- seq(0, 1, length = 1000)
-p.a <- predict(mod.a, matrix(xgrid, ncol = 1))
-pvar.a <- p.a$sd2 + p.a$nugs
-
-p.b <- predict(mod.b, matrix(xgrid, ncol = 1))
-pvar.b <- p.b$sd2 + p.b$nugs
-
-p.c <- predict(mod.c, matrix(xgrid, ncol = 1))
-pvar.c <- p.c$sd2 + p.c$nugs
-
-## HetGP fit: 
-
-## in sqrt scale for population: 
-plot(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Gaussian process on dense grided 'truth' design", ylim = c(0, 10))
-
-#points(X_ori, Y_truth)
-#segments(mod.a$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 * (upper_b - lower_b) + lower_b, (mod.a$mult ) * 0.1,    col = "gray")
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-```
-
-![](fish_fits_files/figure-gfm/make%20plots%20d-4.png)<!-- -->
-
-``` r
-## in original scale for population: 
-plot(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Heteroskedastic Gaussian process on dense gridded 'truth' design", ylim = c(0, 100))
-#points(X_ori, Y_truth^2)
-#segments(mod.a$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.a$X0)) , mod.a$X0 *  (upper_b - lower_b) + lower_b, (mod.a$mult ) ,    col = "gray")
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-```
-
-![](fish_fits_files/figure-gfm/make%20plots%20d-5.png)<!-- -->
-
-``` r
-## Hom GP fit: 
-
-## in sqrt scale for population: 
-plot(xgrid* (upper_b - lower_b) + lower_b, p.b$mean, type = "l",xlab = "Population", ylab = "Sqrt of Number of Marked in Recapture",   main ="Homoskedastic Gaussian process on dense gridded 'truth' design", ylim = c(0, 10))
-
-#points(X_ori, Y_truth)
-#segments(mod.b$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 * (upper_b - lower_b) + lower_b, (mod.b$mult ) * 0.1,    col = "gray")
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.b$mean, sqrt(pvar.b)), col = 2, lty = 2)
-```
-
-![](fish_fits_files/figure-gfm/make%20plots%20d-6.png)<!-- -->
-
-``` r
-## in original scale for population: 
-plot(xgrid*  (upper_b - lower_b) + lower_b, (p.b$mean)^2, type = "l", xlab = "Population", ylab = "Number of Marked in Recapture",    main = "Homoskedastic Gaussian process on dense gridded 'truth' design", ylim = c(0, 100))
-#points(X_ori, Y_truth^2)
-#segments(mod.b$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.b$X0)) , mod.b$X0 *  (upper_b - lower_b) + lower_b, (mod.b$mult ) ,    col = "gray")
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.b$mean, sqrt(pvar.b)))^2, col = 2, lty = 2)
-```
-
-![](fish_fits_files/figure-gfm/make%20plots%20d-7.png)<!-- -->
-
-``` r
-## HetTP fit: 
-
-## in sqrt scale for population: 
-plot(xgrid* (upper_b - lower_b) + lower_b, p.c$mean, type = "l",xlab = "Population", 
-     ylab = "Sqrt of Number of Marked in Recapture",   main ="Heteroskedastic Student-t process on dense gridded 'truth' design", ylim = c(0, 10))
-
-#points(X_ori, Y_truth)
-#segments(mod.c$X0 * (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 * (upper_b - lower_b) + lower_b, (mod.c$mult ) * 0.1,    col = "gray")
-lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs), col = 2, lty = 2)
-```
-
-![](fish_fits_files/figure-gfm/make%20plots%20d-8.png)<!-- -->
-
-``` r
-## in original scale for population: 
-plot(xgrid*  (upper_b - lower_b) + lower_b, (p.c$mean)^2, type = "l", xlab = "Population", 
-     ylab = "Number of Marked in Recapture", main = "Heteroskedastic Student-t process on dense gridded 'truth' design", ylim = c(0, 100))
-#points(X_ori, Y_truth^2)
-#segments(mod.c$X0 *  (upper_b - lower_b) + lower_b, rep(0, nrow(mod.c$X0)) , mod.c$X0 *  (upper_b - lower_b) + lower_b, (mod.c$mult ) ,    col = "gray")
-lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean + 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
-lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p.c$nugs))^2, col = 2, lty = 2)
-```
-
-![](fish_fits_files/figure-gfm/make%20plots%20d-9.png)<!-- -->
 
 ## Superimposed plots
 
@@ -380,22 +328,16 @@ lines(xgrid *  (upper_b - lower_b) + lower_b, (p.c$mean - 2 * sqrt(p.c$sd2 + p.c
 ``` r
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.hom$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
-     main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+     main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10), col = 2)
 #points(fish$population_size , Y)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.hom$mean, sqrt(pvar.hom)), col = 1, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.hom$mean, sqrt(pvar.hom)), col = 1, lty = 2)
-
-## add HetGP "truth": 
-#lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
-#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-#legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.hom$mean, sqrt(pvar.hom)), col = 2, lty = 2)
 
 ## plot pointwise quantiles only: 
-points(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 2)
-points(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 2)
-points(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 2)
-legend("topright", c("HomGP", "HomGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 1)
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 1, lty = 2)
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 1, lty = 2)
+legend("topright", c("homGP", "Truth"), pch = c(NA, NA, NA), lty = c(1, 1), col=c(2, 1))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20e-1.png)<!-- -->
@@ -404,23 +346,17 @@ legend("topright", c("HomGP", "HomGP quantiles", "Truth quantiles"), pch = c(NA,
 ## In original units: 
 ## transform back in original scale for population: 
 plot( xgrid* (upper_b - lower_b) + lower_b, (p.hom$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
-     main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85))
+     main ="Homoskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85), col = 2)
 #points(fish$population_size , Y^2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.hom$mean, sqrt(pvar.hom))^2), col = 1, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.hom$mean, sqrt(pvar.hom))^2), col = 1, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.hom$mean, sqrt(pvar.hom))^2), col = 2, lty = 2)
 
-## in original scale for population: 
-#lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
-
-#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-#legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
 
 ## plot pointwise quantiles only: 
-points(fish_2$population_size[1:20], recaps_qs[2,], col = 2)
-points(fish_2$population_size[1:20], recaps_qs[1,], col = 2)
-points(fish_2$population_size[1:20], recaps_qs[3,], col = 2)
-legend("topright", c("HomGP", "HomGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
+lines(fish_2$population_size[1:20], recaps_qs[2,], col = 1)
+lines(fish_2$population_size[1:20], recaps_qs[1,], col = 1, lty = 2)
+lines(fish_2$population_size[1:20], recaps_qs[3,], col = 1, lty = 2)
+legend("topright", c("homGP", "Truth"), pch = c(NA, NA, NA), lty = c(1, 1), col=c(2, 1))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20e-2.png)<!-- -->
@@ -430,22 +366,17 @@ legend("topright", c("HomGP", "HomGP quantiles", "Truth quantiles"), pch = c(NA,
 ``` r
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.het$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10))
+     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 10), col = 2)
 #points(fish$population_size , Y)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.het$mean, sqrt(pvar.het)), col = 1, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.het$mean, sqrt(pvar.het)), col = 1, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.het$mean, sqrt(pvar.het)), col = 2, lty = 2)
 
-## add HetGP "truth": 
-#lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
-#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-#legend("topright", c("HetGP", "Truth", "HetGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
 
 ## plot pointwise quantiles only: 
-points(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 2)
-points(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 2)
-points(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 2)
-legend("topright", c("HetGP", "HetGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 1)
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 1, lty = 2)
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 1, lty = 2)
+legend("topright", c("hetGP", "Truth"), pch = c(NA, NA, NA), lty = c(1, 1), col=c(2, 1))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20f-1.png)<!-- -->
@@ -454,48 +385,56 @@ legend("topright", c("HetGP", "HetGP quantiles", "Truth quantiles"), pch = c(NA,
 ## In original units: 
 ## transform back in original scale for population: 
 plot( xgrid* (upper_b - lower_b) + lower_b, (p.het$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85))
+     main ="Heteroskedastic Gaussian process surrogate on gridded design", ylim = c(0, 85), col = 2)
 #points(fish$population_size , Y^2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.het$mean, sqrt(pvar.het))^2), col = 1, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.het$mean, sqrt(pvar.het))^2), col = 1, lty = 2)
-
-## in original scale for population: 
-#lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
-#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-#legend("topright", c("HomeGP", "Truth", "HomGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.het$mean, sqrt(pvar.het))^2), col = 2, lty = 2)
 
 
 ## plot pointwise quantiles only: 
-points(fish_2$population_size[1:20], recaps_qs[2,], col = 2)
-points(fish_2$population_size[1:20], recaps_qs[1,], col = 2)
-points(fish_2$population_size[1:20], recaps_qs[3,], col = 2)
-legend("topright", c("HetGP", "HetGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
+lines(fish_2$population_size[1:20], recaps_qs[2,], col = 1)
+lines(fish_2$population_size[1:20], recaps_qs[1,], col = 1, lty = 2)
+lines(fish_2$population_size[1:20], recaps_qs[3,], col = 1, lty = 2)
+legend("topright", c("hetGP", "Truth"), pch = c(NA, NA, NA), lty = c(1, 1), col=c(2, 1))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20f-2.png)<!-- -->
+
+### QK with “truth”:
+
+``` r
+recaps_qs_2 <- apply(recaps, 2, quantile, probs=c(0.05, 0.25, 0.5, 0.75, 0.95)) #truth for different quantiles
+
+
+plot(xgrid* (upper_b - lower_b) + lower_b, p.QK.05$mean, type = 'l', lty = 2, col=c("red"), ylim = c(0, 85),  xlab = "Population", ylab = "Number of Marked in Recapture", main ="Quantile kriging surrogate on gridded design ")
+lines(xgrid* (upper_b - lower_b) + lower_b, p.QK.5$mean, type = 'l', lty = 1, col=c("purple"))
+lines(xgrid* (upper_b - lower_b) + lower_b, p.QK.95$mean, type = 'l', lty = 2, col=c("red"))
+
+
+## plot pointwise quantiles only: 
+lines(fish_2$population_size[1:20], recaps_qs_2[3,], col = 1)
+lines(fish_2$population_size[1:20], recaps_qs_2[1,], col = 1, lty = 2)
+lines(fish_2$population_size[1:20], recaps_qs_2[5,], col = 1, lty = 2)
+legend('topright', c(paste0(c(95, 50, 5), "%"), "Truth"), lty = c(2,1,2, 1), col=c("red", "purple", "red", "black"))
+```
+
+![](fish_fits_files/figure-gfm/make%20plots%20QK%202-1.png)<!-- -->
 
 ### Sequential hetGP with “truth”:
 
 ``` r
 ## in sqrt scale for population: 
 plot(xgrid* (upper_b - lower_b) + lower_b, p.seq$mean, type = "l",xlab = "Population", ylab = "Square Root of Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 10))
+     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 10), col = 2)
 #points(fish$population_size , Y)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.seq$mean, sqrt(pvar.seq)), col = 1, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.seq$mean, sqrt(pvar.seq)), col = 1, lty = 2)
-
-## add HetGP "truth": 
-#lines(xgrid* (upper_b - lower_b) + lower_b, p.a$mean, type = "l", col = 2)
-#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.05, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-#lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.95, p.a$mean, sqrt(pvar.a)), col = 2, lty = 2)
-#legend("topright", c("SeqGP", "Truth", "SeqGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.025, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, qnorm(0.975, p.seq$mean, sqrt(pvar.seq)), col = 2, lty = 2)
 
 ## plot pointwise quantiles only: 
-points(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 2)
-points(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 2)
-points(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 2)
-legend("topright", c("SeqGP", "SeqGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[2,]), col = 1)
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[1,]), col = 1, lty = 2)
+lines(fish_2$population_size[1:20], sqrt(recaps_qs[3,]), col = 1, lty = 2)
+legend("topright", c("SeqhetGP", "Truth"), pch = c(NA, NA, NA), lty = c(1, 1), col=c(2, 1))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20g-1.png)<!-- -->
@@ -504,23 +443,17 @@ legend("topright", c("SeqGP", "SeqGP quantiles", "Truth quantiles"), pch = c(NA,
 ## In original units: 
 ## transform back in original scale for population: 
 plot( xgrid* (upper_b - lower_b) + lower_b, (p.seq$mean)^2, type = "l",xlab = "Population", ylab = "Number of Marked in Recapture",   
-     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 85))
+     main ="Heteroskedastic Gaussian process surrogate on sequential design", ylim = c(0, 85), col = 2)
 #points(fish$population_size , Y^2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.seq$mean, sqrt(pvar.seq))^2), col = 1, lty = 2)
-lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar.seq))^2), col = 1, lty = 2)
-
-## in original scale for population: 
-#lines(xgrid*  (upper_b - lower_b) + lower_b, (p.a$mean)^2, type = "l", col = 2)
-#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.05, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-#lines(xgrid *  (upper_b - lower_b) + lower_b, (qnorm(0.95, p.a$mean, sqrt(pvar.a)))^2, col = 2, lty = 2)
-#legend("topright", c("SeqGP", "Truth", "SeqGP 95% quantiles", "Truth 95% quantiles"), lty=c(1, 1, 2, 2), col=c(1, 2, 1, 2))
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.025, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
+lines(xgrid * (upper_b - lower_b) + lower_b, (qnorm(0.975, p.seq$mean, sqrt(pvar.seq))^2), col = 2, lty = 2)
 
 
 ## plot pointwise quantiles only: 
-points(fish_2$population_size[1:20], recaps_qs[2,], col = 2)
-points(fish_2$population_size[1:20], recaps_qs[1,], col = 2)
-points(fish_2$population_size[1:20], recaps_qs[3,], col = 2)
-legend("topright", c("SeqGP", "SeqGP quantiles", "Truth quantiles"), pch = c(NA, NA, 1), lty = c(1, 2, NA), col=c(1, 1, 2))
+lines(fish_2$population_size[1:20], recaps_qs[2,], col = 1)
+lines(fish_2$population_size[1:20], recaps_qs[1,], col = 1, lty = 2)
+lines(fish_2$population_size[1:20], recaps_qs[3,], col = 1, lty = 2)
+legend("topright", c("SeqhetGP", "Truth"), pch = c(NA, NA, NA), lty = c(1, 1), col=c(2, 1))
 ```
 
 ![](fish_fits_files/figure-gfm/make%20plots%20g-2.png)<!-- -->
