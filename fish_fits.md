@@ -466,7 +466,7 @@ Step 1: we \`\`import’’ our observed data
 
 ``` r
 # observed data
-yobs <- sqrt(25) 
+yobs <- 25 
 ```
 
 Step 2: we simulate from our surrogate many times. Here we choose to use
@@ -474,12 +474,13 @@ the standard hetGP surrogate, although any could be used.
 
 ``` r
 set.seed(123)
-N <- 100000 ## number of ABC draws
+N <- 1000000 ## number of ABC draws
 xsim <- seq(0, 1, length.out = N) ## select x-values to try
 p.het <- predict(mod.het, matrix(xsim, ncol = 1)) ## predictions using hetGP
 pvar.het <- p.het$sd2 + p.het$nugs ## prediction var
 
 ysim <- rnorm(N, mean = p.het$mean, sd = sqrt(pvar.het)) ## simulate from normal (hetGP gives mean and variance of this normal)
+ysim <- ysim^2 # undo sqrt transform
 ysim <- as.integer(ysim) ## take the integer part (can't have half a fish...)
 ```
 
@@ -489,7 +490,10 @@ Step 3: we check which simulated values equal the observed value
 ## ABC
 x.ABC <- xsim[which(ysim == yobs)] ## check which simulations equal the observation
 x.ABC.native <- x.ABC * (upper_b - lower_b) + 150 ## convert these matching x values into the right scale (not (0,1))
+print(length(x.ABC.native)) #how many accepted samples?
 ```
+
+    ## [1] 3811
 
 Step 4: plot the resulting posterior histogram
 
