@@ -27,4 +27,4 @@ Both Rmarkdown files set up the environment first and wrap up NetLogo from R env
 
 ### Who do I talk to? ###
 
-* The project was originated and is actively maintained by Jiangeng Huang <huangj@ucsc.edu>
+* The project was originated and is actively maintained by Jiangeng Huang <huangj@vt.edu>
