@@ -17,11 +17,11 @@ R code for data genenration:
 * **fish_sim_2.Rmd**: for dense grided one-shot space-filling design simulation.
 
 NetLogo program and R wrapper: 
-* **code/Fish.nlogo**: the NetLogo program for fish simulation ([under NetLogo version 6.0.4](https://ccl.northwestern.edu/netlogo/index.shtml))
+* **code/Fish.nlogo**: the NetLogo program for fish simulation (under NetLogo version 6.0.4)
 * **code/netlogo_fish_functions.R**: R wrapper for NetLogo
 
 Note: data simulation processes using fish model requires wrapping up NetLogo code into an R environment.
-NetLogo 6.0.4 version was used for this paper, which works for both Linux and Windows systems, but with an rJava issue in macOS system. 
+[NetLogo 6.0.4](https://ccl.northwestern.edu/netlogo/index.shtml)) version was used for this paper, which works for both Linux and Windows systems, but with an rJava issue in macOS system. 
 Both Rmarkdown files set up the parameters first and call NetLogo to run from R environment. Then, generated data is further wrapped into R and saved into csv files. 
 
 ### The **data** directory contains the simulated fish data: 
